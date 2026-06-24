@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/compare/v1.0.0...v1.0.1) (2026-06-24)
+
+
+### 🐛 Fixes
+
+* Only set zone on disk when disk is not ZRS ([#2](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/issues/2)) ([983d95f](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/commit/983d95fc8d061065388dfba40654e49c1d6f7719))
+
 ## [1.0.0](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/compare/v0.5.0...v1.0.0) (2025-07-28)
 
 ## [0.5.0](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/compare/v0.4.0...v0.5.0) (2025-05-27)
@@ -64,4 +71,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🚀 Features
 
 * Firstversion ([#1](https://github.com/schubergphilis/terraform-azure-mcaf-virtualmachine/pull/1)) ([0e97a04](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/commit/0e97a04851b2da6e994211d22e9606a2fe80a3cd))
-
