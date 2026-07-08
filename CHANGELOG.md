@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.2](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/compare/v1.0.1...v1.0.2) (2026-07-08)
+
+
+### 🐛 Fixes
+
+* add lifecycle ignore for these extensions ([#4](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/issues/4)) ([a29f147](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/commit/a29f1472afd3626c9973f743aa446200bb984ba3))
+
 ## [1.0.1](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/compare/v1.0.0...v1.0.1) (2026-06-24)
 
 
