@@ -40,6 +40,11 @@ resource "azurerm_virtual_machine_extension" "gc" {
   type                       = (lower(var.os_type) == "linux") ? "ConfigurationForLinux" : "ConfigurationForWindows"
   type_handler_version       = "1.0"
   auto_upgrade_minor_version = "true"
+  automatic_upgrade_enabled  = "true"
+
+  lifecycle {
+    ignore_changes = [type_handler_version]
+  }
 }
 
 resource "azurerm_virtual_machine_extension" "guest_attestation" {
@@ -52,4 +57,8 @@ resource "azurerm_virtual_machine_extension" "guest_attestation" {
   type_handler_version       = "1.0"
   auto_upgrade_minor_version = "true"
   automatic_upgrade_enabled  = "true"
+
+  lifecycle {
+    ignore_changes = [type_handler_version]
+  }
 }
