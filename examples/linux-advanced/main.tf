@@ -12,6 +12,7 @@ terraform {
 module "des" {
   source  = "schubergphilis-ep/mcaf-diskencryptionset/azure"
   version = "0.1.0"
+
   name                      = "testdes"
   resource_group_name       = "test-rg"
   location                  = "westeurope"
