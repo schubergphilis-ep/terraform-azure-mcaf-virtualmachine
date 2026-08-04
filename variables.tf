@@ -816,7 +816,7 @@ This map of objects describes an auto-shutdown schedule for the virtual machine.
     - `email` = (Optional) = Email address or multiple email addresses separated by a semi-colon where the notification emails will be sent.
     - `time_in_minutes` = (Optional) TIme in minutes between 15 and 120 before a shutdown event at which a notification will be sent.  Defaults to "30".
     - `webhook_url` = (Optional) The webhook URL to which notifications will be sent.
-  - `tags` = (Optional) - Tags to apply to the shutdown schedules resource.
+  - `tags` = (Optional) - Tags to apply to the shutdown schedules resource. Defaults to the module level `tags` when omitted.
   - `timezone` = (Required) - The time zone ID (e.g. Pacific Standard time).
 
 Example Input:
