@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.3](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/compare/v1.0.2...v1.0.3) (2026-08-04)
+
+
+### 🐛 Fixes
+
+* added missing tags that caused drift on every run ([fe0dc64](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/commit/fe0dc6490f05719ac36f96a62cbee6823f8d2ae2))
+* added missing tags that caused drift on every run ([#7](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/issues/7)) ([fe0dc64](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/commit/fe0dc6490f05719ac36f96a62cbee6823f8d2ae2))
+* migrate MCAF module sources ([#6](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/issues/6)) ([7b93a9e](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/commit/7b93a9ec247a0a32ce519af9d845e36f6cf85a5d))
+
 ## [1.0.2](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/compare/v1.0.1...v1.0.2) (2026-07-08)
 
 
