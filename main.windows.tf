@@ -210,6 +210,45 @@ resource "azapi_update_resource" "windows_os_disk" {
   }
 }
 
+# https://learn.microsoft.com/en-us/azure/virtual-machines/metadata-security-protocol/configuration
+# https://github.com/Azure/GuestProxyAgent
+# Metadata Security Protocol (MSP) / Guest Proxy Agent settings.
+resource "azapi_update_resource" "windows_proxy_agent_settings" {
+  count = lower(var.os_type) == "windows" ? 1 : 0
+
+  type      = "Microsoft.Compute/virtualMachines@2024-11-01"
+  name      = azurerm_windows_virtual_machine.this[0].name
+  parent_id = "/subscriptions/${local.virtualmachine_parsed_id["subscription_id"]}/resourceGroups/${local.virtualmachine_parsed_id["resource_group_name"]}"
+
+  body = {
+    properties = {
+      securityProfile = {
+        proxyAgentSettings = merge(
+          {
+            enabled = var.proxy_agent_settings.enabled
+            imds = {
+              mode = var.proxy_agent_settings.imds.mode
+            }
+            wireServer = {
+              mode = var.proxy_agent_settings.wire_server.mode
+            }
+          },
+          var.proxy_agent_settings.key_incarnation_id != null ? {
+            keyIncarnationId = var.proxy_agent_settings.key_incarnation_id
+          } : {}
+        )
+      }
+    }
+  }
+
+  depends_on = [
+    azapi_update_resource.windows_os_disk,
+    azurerm_virtual_machine_extension.this_extension,
+    azurerm_virtual_machine_extension.gc,
+    azurerm_virtual_machine_extension.guest_attestation
+  ]
+}
+
 resource "azapi_resource_action" "enable_winrm" {
   count       = (lower(var.os_type) == "windows") && var.winrm_listeners.https_listener_with_self_signed_cert ? 1 : 0
   type        = "Microsoft.Compute/virtualMachines@2024-11-01"

@@ -57,6 +57,14 @@ GWC -> sharedden.den.attest.azure.net,shareddewc.dewc.attest.azure.net
 ```
 make sure to open your firewall to allow traffic to it.
 
+## Metadata Security Protocol (MSP)
+
+This module enables the Azure Guest Proxy Agent by default for Windows and Linux VMs using inline `Audit` mode for both the Azure Instance Metadata Service and WireServer. Override `proxy_agent_settings` to use `Enforce` mode after validating the VM image and workload, or set `enabled = false` to disable MSP.
+
+MSP is applied through `azapi_update_resource` using `Microsoft.Compute/virtualMachines@2024-11-01`, because this setting is not yet exposed by the `azurerm` provider. Support depends on the VM image and architecture. On Windows the Guest Proxy Agent is installed automatically; on Linux it is installed by the `Microsoft.CPlat.ProxyAgent/ProxyAgentLinux` extension, which this module adds when MSP is enabled. Advanced in-guest allowlist configuration is not supported.
+
+See the [Azure MSP configuration documentation](https://learn.microsoft.com/en-us/azure/virtual-machines/metadata-security-protocol/configuration) for compatibility details and audit log locations.
+
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
@@ -89,7 +97,9 @@ No modules.
 |------|------|
 | [azapi_resource_action.enable_winrm](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource_action) | resource |
 | [azapi_update_resource.linux_os_disk](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/update_resource) | resource |
+| [azapi_update_resource.linux_proxy_agent_settings](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/update_resource) | resource |
 | [azapi_update_resource.windows_os_disk](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/update_resource) | resource |
+| [azapi_update_resource.windows_proxy_agent_settings](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/update_resource) | resource |
 | [azurerm_dev_test_global_vm_shutdown_schedule.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/dev_test_global_vm_shutdown_schedule) | resource |
 | [azurerm_key_vault_secret.admin_password](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/key_vault_secret) | resource |
 | [azurerm_linux_virtual_machine.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine) | resource |
@@ -107,6 +117,7 @@ No modules.
 | [azurerm_virtual_machine_data_disk_attachment.this_windows](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_data_disk_attachment) | resource |
 | [azurerm_virtual_machine_extension.gc](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_extension) | resource |
 | [azurerm_virtual_machine_extension.guest_attestation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_extension) | resource |
+| [azurerm_virtual_machine_extension.proxy_agent](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_extension) | resource |
 | [azurerm_virtual_machine_extension.this_extension](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_extension) | resource |
 | [azurerm_windows_virtual_machine.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/windows_virtual_machine) | resource |
 | [random_password.admin_password](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password) | resource |
