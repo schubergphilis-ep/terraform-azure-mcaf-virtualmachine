@@ -140,6 +140,55 @@ os_disk_managed_disk = {
 OS_DISK_MANAGED_DISK
 }
 
+variable "proxy_agent_settings" {
+  type = object({
+    enabled            = optional(bool, true)
+    key_incarnation_id = optional(number)
+    imds = optional(object({
+      mode = optional(string, "Audit")
+    }), {})
+    wire_server = optional(object({
+      mode = optional(string, "Audit")
+    }), {})
+  })
+  default     = {}
+  description = <<PROXY_AGENT_SETTINGS
+(Optional) Configures Metadata Security Protocol (MSP) / Guest Proxy Agent settings for this virtual machine. MSP is enabled by default in Audit mode for both the Azure Instance Metadata Service and WireServer.
+
+- `enabled`            = (Optional) - Whether the Proxy Agent feature is enabled. Defaults to `true`.
+- `key_incarnation_id` = (Optional) - Increase this value to reset the key securing the guest/host communication channel.
+- `imds.mode`          = (Optional) - Enforcement mode for IMDS. Possible values are `Audit`, `Enforce`, and `Disabled`. Defaults to `Audit`.
+- `wire_server.mode`   = (Optional) - Enforcement mode for WireServer. Possible values are `Audit`, `Enforce`, and `Disabled`. Defaults to `Audit`.
+
+The setting is applied with `azapi_update_resource` against `Microsoft.Compute/virtualMachines@2024-11-01` because it is not yet exposed by the `azurerm` provider. Advanced in-guest allowlist configuration is not supported by this input.
+
+Set `enabled = false` to disable MSP, or override both modes to `Enforce` after validating the VM image and workload in Audit mode.
+
+Example Input:
+```hcl
+proxy_agent_settings = {
+  enabled = true
+  imds = {
+    mode = "Audit"
+  }
+  wire_server = {
+    mode = "Audit"
+  }
+}
+```
+PROXY_AGENT_SETTINGS
+
+  validation {
+    condition     = contains(["Audit", "Enforce", "Disabled"], var.proxy_agent_settings.imds.mode)
+    error_message = "proxy_agent_settings.imds.mode must be one of Audit, Enforce, or Disabled."
+  }
+
+  validation {
+    condition     = contains(["Audit", "Enforce", "Disabled"], var.proxy_agent_settings.wire_server.mode)
+    error_message = "proxy_agent_settings.wire_server.mode must be one of Audit, Enforce, or Disabled."
+  }
+}
+
 variable "data_disk_managed_disks" {
   type = map(object({
     caching                                   = string
