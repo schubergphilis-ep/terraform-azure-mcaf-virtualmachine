@@ -65,6 +65,22 @@ MSP is applied through `azapi_update_resource` using `Microsoft.Compute/virtualM
 
 See the [Azure MSP configuration documentation](https://learn.microsoft.com/en-us/azure/virtual-machines/metadata-security-protocol/configuration) for compatibility details and audit log locations.
 
+Switching to `Enforce` (see `examples/linux-advanced`):
+
+```hcl
+proxy_agent_settings = {
+  enabled = true
+  imds = {
+    mode = "Enforce"
+  }
+  wire_server = {
+    mode = "Enforce"
+  }
+}
+```
+
+In `Enforce` mode unauthenticated in-guest calls to IMDS and WireServer are blocked rather than logged, which can break agents and workloads that reach those endpoints. Run in `Audit` first and confirm `failedAuthenticateSummary` in the guest status file is empty before flipping. `key_incarnation_id` can be incremented to reset the key securing the guest/host channel.
+
 ### Verifying MSP
 
 The Azure portal renders the MSP settings on the VM **Configuration** blade for Windows VMs only, so on Linux it looks unconfigured even when it is active. Verify against the API and the guest instead.
