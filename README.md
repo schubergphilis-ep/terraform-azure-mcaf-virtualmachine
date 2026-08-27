@@ -65,6 +65,33 @@ MSP is applied through `azapi_update_resource` using `Microsoft.Compute/virtualM
 
 See the [Azure MSP configuration documentation](https://learn.microsoft.com/en-us/azure/virtual-machines/metadata-security-protocol/configuration) for compatibility details and audit log locations.
 
+### Verifying MSP
+
+The Azure portal renders the MSP settings on the VM **Configuration** blade for Windows VMs only, so on Linux it looks unconfigured even when it is active. Verify against the API and the guest instead.
+
+Host side:
+
+```bash
+az rest --method get --query "properties.securityProfile.proxyAgentSettings" \
+  --url "https://management.azure.com/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Compute/virtualMachines/<vm>?api-version=2024-11-01"
+```
+
+Guest side (Linux) - `secureChannelState` is the authoritative readout:
+
+```bash
+az vm run-command invoke -g <rg> -n <vm> --command-id RunShellScript --query "value[0].message" -o tsv \
+  --scripts 'systemctl is-active azure-proxy-agent; grep -o "secureChannelState[^,]*" /var/log/azure-proxy-agent/status.json'
+```
+
+```
+active
+secureChannelState": "WireServer Audit -  IMDS Audit - HostGA Audit"
+```
+
+The full `/var/log/azure-proxy-agent/status.json` also reports `keyLatchStatus`, `ebpfProgramStatus` and `proxyListenerStatus` (all `RUNNING` when healthy), a `proxyConnectionSummary` of the processes being proxied, and `failedAuthenticateSummary` - which stays empty in `Audit` mode but is what to check before switching to `Enforce`.
+
+On Windows the equivalent is `Get-Service GuestProxyAgent` and `C:\WindowsAzure\ProxyAgent\Logs\status.json`.
+
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
