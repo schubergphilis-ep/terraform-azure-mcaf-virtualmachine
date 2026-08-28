@@ -93,13 +93,15 @@ module "vm" {
 
   # Metadata Security Protocol. Defaults to Audit on both endpoints; only move to
   # Enforce once failedAuthenticateSummary in the guest status.json stays empty.
-  proxy_agent_settings = {
-    enabled = true
-    imds = {
-      mode = "Enforce"
-    }
-    wire_server = {
-      mode = "Enforce"
+  virtual_machine_properties = {
+    proxy_agent = {
+      enabled = true
+      imds = {
+        mode = "Enforce"
+      }
+      wire_server = {
+        mode = "Enforce"
+      }
     }
   }
 

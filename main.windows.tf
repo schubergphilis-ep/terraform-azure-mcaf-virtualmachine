@@ -210,10 +210,12 @@ resource "azapi_update_resource" "windows_os_disk" {
   }
 }
 
+# Single PATCH for virtual machine properties that azurerm does not expose. Today that is
+# only Metadata Security Protocol (MSP) / Guest Proxy Agent; new exotic settings extend
+# local.virtual_machine_azapi_properties rather than adding another update resource.
 # https://learn.microsoft.com/en-us/azure/virtual-machines/metadata-security-protocol/configuration
 # https://github.com/Azure/GuestProxyAgent
-# Metadata Security Protocol (MSP) / Guest Proxy Agent settings.
-resource "azapi_update_resource" "windows_proxy_agent_settings" {
+resource "azapi_update_resource" "windows_vm_properties" {
   count = lower(var.os_type) == "windows" ? 1 : 0
 
   type      = "Microsoft.Compute/virtualMachines@2024-11-01"
@@ -221,24 +223,7 @@ resource "azapi_update_resource" "windows_proxy_agent_settings" {
   parent_id = "/subscriptions/${local.virtualmachine_parsed_id["subscription_id"]}/resourceGroups/${local.virtualmachine_parsed_id["resource_group_name"]}"
 
   body = {
-    properties = {
-      securityProfile = {
-        proxyAgentSettings = merge(
-          {
-            enabled = var.proxy_agent_settings.enabled
-            imds = {
-              mode = var.proxy_agent_settings.imds.mode
-            }
-            wireServer = {
-              mode = var.proxy_agent_settings.wire_server.mode
-            }
-          },
-          var.proxy_agent_settings.key_incarnation_id != null ? {
-            keyIncarnationId = var.proxy_agent_settings.key_incarnation_id
-          } : {}
-        )
-      }
-    }
+    properties = local.virtual_machine_azapi_properties
   }
 
   depends_on = [

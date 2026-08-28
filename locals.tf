@@ -132,4 +132,29 @@ locals {
 
   virtualmachine_resource_id = (lower(var.os_type) == "windows") ? azurerm_windows_virtual_machine.this[0].id : azurerm_linux_virtual_machine.this[0].id
   virtualmachine_parsed_id   = provider::azurerm::parse_resource_id(local.virtualmachine_resource_id)
+
+  proxy_agent = var.virtual_machine_properties.proxy_agent
+
+  # Single body for the generic VM-properties PATCH, shared by main.linux.tf and
+  # main.windows.tf so the two cannot drift apart.
+  virtual_machine_azapi_properties = {
+    securityProfile = {
+      proxyAgentSettings = merge(
+        {
+          enabled = local.proxy_agent.enabled
+        },
+        local.proxy_agent.enabled ? {
+          imds = {
+            mode = local.proxy_agent.imds.mode
+          }
+          wireServer = {
+            mode = local.proxy_agent.wire_server.mode
+          }
+        } : {},
+        local.proxy_agent.enabled && local.proxy_agent.key_incarnation_id != null ? {
+          keyIncarnationId = local.proxy_agent.key_incarnation_id
+        } : {}
+      )
+    }
+  }
 }
