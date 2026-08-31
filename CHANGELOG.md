@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/compare/v1.0.3...v1.1.0) (2026-08-31)
+
+
+### 🚀 Features
+
+* adding new MSP features. ([#9](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/issues/9)) ([200caea](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/commit/200caea9921893d2980e1b8be2d7cac084739ab1))
+
 ## [1.0.3](https://github.com/schubergphilis-ep/terraform-azure-mcaf-virtualmachine/compare/v1.0.2...v1.0.3) (2026-08-04)
 
 
