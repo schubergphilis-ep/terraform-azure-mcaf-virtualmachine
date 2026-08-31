@@ -140,6 +140,58 @@ os_disk_managed_disk = {
 OS_DISK_MANAGED_DISK
 }
 
+variable "virtual_machine_properties" {
+  type = object({
+    proxy_agent = optional(object({
+      enabled            = optional(bool, true)
+      key_incarnation_id = optional(number)
+      imds = optional(object({
+        mode = optional(string, "Audit")
+      }), {})
+      wire_server = optional(object({
+        mode = optional(string, "Audit")
+      }), {})
+    }), {})
+  })
+  default     = {}
+  description = <<VIRTUAL_MACHINE_PROPERTIES
+(Optional) Escape hatch for virtual machine properties that the `azurerm` provider does not expose. Everything set here is applied as a single `azapi_update_resource` PATCH against `Microsoft.Compute/virtualMachines@2024-11-01`. New settings are added as sub-blocks on this variable so they ride along on the same request instead of getting their own variable and their own PATCH.
+
+- `proxy_agent` = (Optional) - Metadata Security Protocol (MSP) / Guest Proxy Agent settings. MSP is enabled by default in Audit mode for both the Azure Instance Metadata Service and WireServer.
+  - `enabled`            = (Optional) - Whether the Proxy Agent feature is enabled. Defaults to `true`.
+  - `key_incarnation_id` = (Optional) - Increase this value to reset the key securing the guest/host communication channel.
+  - `imds.mode`          = (Optional) - Enforcement mode for IMDS. Possible values are `Audit`, `Enforce`, and `Disabled`. Defaults to `Audit`.
+  - `wire_server.mode`   = (Optional) - Enforcement mode for WireServer. Possible values are `Audit`, `Enforce`, and `Disabled`. Defaults to `Audit`.
+
+Set `proxy_agent.enabled = false` to disable MSP, or override both modes to `Enforce` after validating the VM image and workload in Audit mode. Advanced in-guest allowlist configuration is not supported by this input.
+
+Example Input:
+```hcl
+virtual_machine_properties = {
+  proxy_agent = {
+    enabled = true
+    imds = {
+      mode = "Audit"
+    }
+    wire_server = {
+      mode = "Audit"
+    }
+  }
+}
+```
+VIRTUAL_MACHINE_PROPERTIES
+
+  validation {
+    condition     = contains(["Audit", "Enforce", "Disabled"], var.virtual_machine_properties.proxy_agent.imds.mode)
+    error_message = "virtual_machine_properties.proxy_agent.imds.mode must be one of Audit, Enforce, or Disabled."
+  }
+
+  validation {
+    condition     = contains(["Audit", "Enforce", "Disabled"], var.virtual_machine_properties.proxy_agent.wire_server.mode)
+    error_message = "virtual_machine_properties.proxy_agent.wire_server.mode must be one of Audit, Enforce, or Disabled."
+  }
+}
+
 variable "data_disk_managed_disks" {
   type = map(object({
     caching                                   = string

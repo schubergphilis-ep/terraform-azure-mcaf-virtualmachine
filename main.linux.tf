@@ -194,3 +194,47 @@ resource "azapi_update_resource" "linux_os_disk" {
     }
   }
 }
+
+# Single PATCH for virtual machine properties that azurerm does not expose. Today that is
+# only Metadata Security Protocol (MSP) / Guest Proxy Agent; new exotic settings extend
+# local.virtual_machine_azapi_properties rather than adding another update resource.
+# https://learn.microsoft.com/en-us/azure/virtual-machines/metadata-security-protocol/configuration
+resource "azapi_update_resource" "linux_vm_properties" {
+  count = lower(var.os_type) == "linux" ? 1 : 0
+
+  type      = "Microsoft.Compute/virtualMachines@2024-11-01"
+  name      = azurerm_linux_virtual_machine.this[0].name
+  parent_id = "/subscriptions/${local.virtualmachine_parsed_id["subscription_id"]}/resourceGroups/${local.virtualmachine_parsed_id["resource_group_name"]}"
+
+  body = {
+    properties = local.virtual_machine_azapi_properties
+  }
+
+  depends_on = [
+    azapi_update_resource.linux_os_disk,
+    azurerm_virtual_machine_extension.this_extension,
+    azurerm_virtual_machine_extension.gc,
+    azurerm_virtual_machine_extension.guest_attestation
+  ]
+}
+
+# Linux does not implicitly install the Guest Proxy Agent when proxyAgentSettings.enabled is true,
+# unlike Windows. The extension must be installed explicitly.
+# https://learn.microsoft.com/en-us/azure/virtual-machines/metadata-security-protocol/brownfield
+resource "azurerm_virtual_machine_extension" "proxy_agent" {
+  count = lower(var.os_type) == "linux" && local.proxy_agent.enabled ? 1 : 0
+
+  name                       = "AzureGuestProxyAgentExtension"
+  virtual_machine_id         = local.virtualmachine_resource_id
+  publisher                  = "Microsoft.CPlat.ProxyAgent"
+  type                       = "ProxyAgentLinux"
+  type_handler_version       = "1.0"
+  auto_upgrade_minor_version = true
+  tags                       = local.tags
+
+  lifecycle {
+    ignore_changes = [type_handler_version]
+  }
+
+  depends_on = [azapi_update_resource.linux_vm_properties]
+}

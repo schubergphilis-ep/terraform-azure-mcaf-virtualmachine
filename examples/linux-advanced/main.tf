@@ -91,6 +91,20 @@ module "vm" {
 
   custom_data = filebase64("cloudinit/cloud-init.sh")
 
+  # Metadata Security Protocol. Defaults to Audit on both endpoints; only move to
+  # Enforce once failedAuthenticateSummary in the guest status.json stays empty.
+  virtual_machine_properties = {
+    proxy_agent = {
+      enabled = true
+      imds = {
+        mode = "Enforce"
+      }
+      wire_server = {
+        mode = "Enforce"
+      }
+    }
+  }
+
   os_disk = {
     name                   = "testlinvm-osdisk"
     size_gb                = 128

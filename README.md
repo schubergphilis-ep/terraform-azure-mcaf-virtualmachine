@@ -57,6 +57,61 @@ GWC -> sharedden.den.attest.azure.net,shareddewc.dewc.attest.azure.net
 ```
 make sure to open your firewall to allow traffic to it.
 
+## Metadata Security Protocol (MSP)
+
+This module enables the Azure Guest Proxy Agent by default for Windows and Linux VMs using inline `Audit` mode for both the Azure Instance Metadata Service and WireServer. Override `virtual_machine_properties.proxy_agent` to use `Enforce` mode after validating the VM image and workload, or set `enabled = false` to disable MSP.
+
+MSP is applied through `azapi_update_resource` using `Microsoft.Compute/virtualMachines@2024-11-01`, because this setting is not yet exposed by the `azurerm` provider. It rides along on the module's generic `virtual_machine_properties` escape hatch, which is the single PATCH used for every VM property `azurerm` cannot set - future settings become sub-blocks there instead of a new variable and a new request. Support depends on the VM image and architecture. On Windows the Guest Proxy Agent is installed automatically; on Linux it is installed by the `Microsoft.CPlat.ProxyAgent/ProxyAgentLinux` extension, which this module adds when MSP is enabled. Advanced in-guest allowlist configuration is not supported.
+
+See the [Azure MSP configuration documentation](https://learn.microsoft.com/en-us/azure/virtual-machines/metadata-security-protocol/configuration) for compatibility details and audit log locations.
+
+Switching to `Enforce` (see `examples/linux-advanced`):
+
+```hcl
+virtual_machine_properties = {
+  proxy_agent = {
+    enabled = true
+    imds = {
+      mode = "Enforce"
+    }
+    wire_server = {
+      mode = "Enforce"
+    }
+  }
+}
+```
+
+Disabling MSP with `proxy_agent = { enabled = false }` PATCHes `enabled = false` explicitly rather than omitting the object, because `azapi_update_resource` is a no-op on destroy - omitting it would leave MSP switched on for any VM that already had it, and on Linux would strip the guest agent extension while the flag stayed `true`.
+
+In `Enforce` mode unauthenticated in-guest calls to IMDS and WireServer are blocked rather than logged, which can break agents and workloads that reach those endpoints. Run in `Audit` first and confirm `failedAuthenticateSummary` in the guest status file is empty before flipping. `key_incarnation_id` can be incremented to reset the key securing the guest/host channel.
+
+### Verifying MSP
+
+The Azure portal renders the MSP settings on the VM **Configuration** blade for Windows VMs only, so on Linux it looks unconfigured even when it is active. Verify against the API and the guest instead.
+
+Host side:
+
+```bash
+az rest --method get --query "properties.securityProfile.proxyAgentSettings" \
+  --url "https://management.azure.com/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Compute/virtualMachines/<vm>?api-version=2024-11-01"
+```
+
+Guest side (Linux) - `secureChannelState` is the authoritative readout:
+
+```bash
+az vm run-command invoke -g <rg> -n <vm> --command-id RunShellScript --query "value[0].message" -o tsv \
+  --scripts 'systemctl is-active azure-proxy-agent; grep -o "secureChannelState[^,]*" /var/log/azure-proxy-agent/status.json'
+```
+
+```
+active
+secureChannelState": "WireServer Audit -  IMDS Audit - HostGA Audit"
+```
+
+The full `/var/log/azure-proxy-agent/status.json` also reports `keyLatchStatus`, `ebpfProgramStatus` and `proxyListenerStatus` (all `RUNNING` when healthy), a `proxyConnectionSummary` of the processes being proxied, and `failedAuthenticateSummary` - which stays empty in `Audit` mode but is what to check before switching to `Enforce`.
+
+On Windows the equivalent is `Get-Service GuestProxyAgent` and `C:\WindowsAzure\ProxyAgent\Logs\status.json`.
+
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
@@ -89,7 +144,9 @@ No modules.
 |------|------|
 | [azapi_resource_action.enable_winrm](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource_action) | resource |
 | [azapi_update_resource.linux_os_disk](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/update_resource) | resource |
+| [azapi_update_resource.linux_vm_properties](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/update_resource) | resource |
 | [azapi_update_resource.windows_os_disk](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/update_resource) | resource |
+| [azapi_update_resource.windows_vm_properties](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/update_resource) | resource |
 | [azurerm_dev_test_global_vm_shutdown_schedule.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/dev_test_global_vm_shutdown_schedule) | resource |
 | [azurerm_key_vault_secret.admin_password](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/key_vault_secret) | resource |
 | [azurerm_linux_virtual_machine.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine) | resource |
@@ -107,6 +164,7 @@ No modules.
 | [azurerm_virtual_machine_data_disk_attachment.this_windows](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_data_disk_attachment) | resource |
 | [azurerm_virtual_machine_extension.gc](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_extension) | resource |
 | [azurerm_virtual_machine_extension.guest_attestation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_extension) | resource |
+| [azurerm_virtual_machine_extension.proxy_agent](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_extension) | resource |
 | [azurerm_virtual_machine_extension.this_extension](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_extension) | resource |
 | [azurerm_windows_virtual_machine.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/windows_virtual_machine) | resource |
 | [random_password.admin_password](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password) | resource |
@@ -179,6 +237,7 @@ No modules.
 | <a name="input_termination_notification"></a> [termination\_notification](#input\_termination\_notification) | optional Termination notification object with the following attributes:<br/><br/>- `enabled` = (Optional) - Should the termination notification be enabled on this Virtual Machine? Defaults to false<br/>- `timeout` = (Optional) - Length of time (in minutes, between 5 and 15) a notification to be sent to the VM on the instance metadata server till the VM gets deleted. The time duration should be specified in ISO 8601 format. Defaults to PT5M.<br/><br/>Example Inputs:<pre>hcl<br/>termination_notification = {<br/>  enabled = true<br/>  timeout = "PT5M"<br/>}</pre> | <pre>object({<br/>    enabled = optional(bool, false)<br/>    timeout = optional(string, "PT5M")<br/>  })</pre> | `null` | no |
 | <a name="input_timezone"></a> [timezone](#input\_timezone) | (Optional) Specifies the Time Zone which should be used by the Windows Virtual Machine, [the possible values are defined here](https://jackstromberg.com/2017/01/list-of-time-zones-consumed-by-azure/). Changing this forces a new resource to be created. | `string` | `null` | no |
 | <a name="input_user_data"></a> [user\_data](#input\_user\_data) | (Optional) The Base64-Encoded User Data which should be used for this Virtual Machine. | `string` | `null` | no |
+| <a name="input_virtual_machine_properties"></a> [virtual\_machine\_properties](#input\_virtual\_machine\_properties) | (Optional) Escape hatch for virtual machine properties that the `azurerm` provider does not expose. Everything set here is applied as a single `azapi_update_resource` PATCH against `Microsoft.Compute/virtualMachines@2024-11-01`. New settings are added as sub-blocks on this variable so they ride along on the same request instead of getting their own variable and their own PATCH.<br/><br/>- `proxy_agent` = (Optional) - Metadata Security Protocol (MSP) / Guest Proxy Agent settings. MSP is enabled by default in Audit mode for both the Azure Instance Metadata Service and WireServer.<br/>  - `enabled`            = (Optional) - Whether the Proxy Agent feature is enabled. Defaults to `true`.<br/>  - `key_incarnation_id` = (Optional) - Increase this value to reset the key securing the guest/host communication channel.<br/>  - `imds.mode`          = (Optional) - Enforcement mode for IMDS. Possible values are `Audit`, `Enforce`, and `Disabled`. Defaults to `Audit`.<br/>  - `wire_server.mode`   = (Optional) - Enforcement mode for WireServer. Possible values are `Audit`, `Enforce`, and `Disabled`. Defaults to `Audit`.<br/><br/>Set `proxy_agent.enabled = false` to disable MSP, or override both modes to `Enforce` after validating the VM image and workload in Audit mode. Advanced in-guest allowlist configuration is not supported by this input.<br/><br/>Example Input:<pre>hcl<br/>virtual_machine_properties = {<br/>  proxy_agent = {<br/>    enabled = true<br/>    imds = {<br/>      mode = "Audit"<br/>    }<br/>    wire_server = {<br/>      mode = "Audit"<br/>    }<br/>  }<br/>}</pre> | <pre>object({<br/>    proxy_agent = optional(object({<br/>      enabled            = optional(bool, true)<br/>      key_incarnation_id = optional(number)<br/>      imds = optional(object({<br/>        mode = optional(string, "Audit")<br/>      }), {})<br/>      wire_server = optional(object({<br/>        mode = optional(string, "Audit")<br/>      }), {})<br/>    }), {})<br/>  })</pre> | `{}` | no |
 | <a name="input_virtual_machine_scale_set_resource_id"></a> [virtual\_machine\_scale\_set\_resource\_id](#input\_virtual\_machine\_scale\_set\_resource\_id) | (Optional) Specifies the Orchestrated Virtual Machine Scale Set that this Virtual Machine should be created within. Conflicts with `availability_set_id`. Changing this forces a new resource to be created. | `string` | `null` | no |
 | <a name="input_vm_additional_capabilities"></a> [vm\_additional\_capabilities](#input\_vm\_additional\_capabilities) | Object describing virtual machine additional capabilities using the following attributes:<br/><br/>- `ultra_ssd_enabled` = (Optional) Should the capacity to enable Data Disks of the `UltraSSD_LRS` storage account type be supported on this Virtual Machine? Defaults to `false`.<br/>- `hibernation_enabled = (Optional) Whether to enable the hiberation capability or not.<br/><br/>Example Inputs:<br/><br/>`<pre>hcl<br/>vm_additional_capabilities = {<br/>  ultra_ssd_enabled = true<br/>}</pre> | <pre>object({<br/>    ultra_ssd_enabled  = optional(bool, false)<br/>    hiberation_enabled = optional(bool, null)<br/>  })</pre> | `null` | no |
 | <a name="input_vtpm_enabled"></a> [vtpm\_enabled](#input\_vtpm\_enabled) | (Optional) Specifies whether vTPM should be enabled on the virtual machine. Changing this forces a new resource to be created, defaults to true. | `bool` | `true` | no |
